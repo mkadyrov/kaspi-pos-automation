@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      - PORT=3000
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - kaspi-data:/data
+    restart: unless-stopped
+
+volumes:
+  kaspi-data:
