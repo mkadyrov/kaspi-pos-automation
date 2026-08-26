@@ -8,9 +8,15 @@ DATA_DIR="${DATA_DIR:-/data}"
 
 # Volumes are mounted owned by root. When started as root, fix ownership
 # of the data dir, then re-exec this script as the unprivileged node user.
+# Deliberately NOT recursive: a misconfigured mount (e.g. the host's /data)
+# must never get foreign directory trees chowned underneath it.
 if [ "$(id -u)" = "0" ]; then
-  mkdir -p "$DATA_DIR"
-  chown -R node:node "$DATA_DIR"
+  mkdir -p "$DATA_DIR/logs"
+  chown node:node "$DATA_DIR" "$DATA_DIR/logs"
+  for f in keypair.json device.json ecdh-keypair.json \
+           tracked-payments.json webhook-retries.json webhooks.json; do
+    if [ -e "$DATA_DIR/$f" ]; then chown node:node "$DATA_DIR/$f"; fi
+  done
   exec su-exec node "$0" "$@"
 fi
 
