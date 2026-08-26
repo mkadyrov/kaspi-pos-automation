@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+# su-exec: drop from root to node after fixing volume ownership in entrypoint
+RUN apk add --no-cache su-exec
+
 WORKDIR /app
 
 # Install production dependencies first for better layer caching
@@ -14,8 +17,6 @@ RUN mkdir -p /data && chown -R node:node /data /app
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-USER node
 
 ENV NODE_ENV=production
 ENV PORT=3000

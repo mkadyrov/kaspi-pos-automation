@@ -6,6 +6,14 @@ set -e
 # volume mount survives container rebuilds.
 DATA_DIR="${DATA_DIR:-/data}"
 
+# Volumes are mounted owned by root. When started as root, fix ownership
+# of the data dir, then re-exec this script as the unprivileged node user.
+if [ "$(id -u)" = "0" ]; then
+  mkdir -p "$DATA_DIR"
+  chown -R node:node "$DATA_DIR"
+  exec su-exec node "$0" "$@"
+fi
+
 mkdir -p "$DATA_DIR/logs"
 
 for f in keypair.json device.json ecdh-keypair.json \
