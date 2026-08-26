@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { KASPI_QRPAY_URL } from '../config.js';
 import { loggedFetch, signedQrPayHeaders } from '../helpers.js';
 import { decryptSecret } from '../crypto.js';
+import { loadWebhooks } from '../webhookStore.js';
 
 const router = Router();
 
@@ -59,6 +60,36 @@ router.get('/check', async (req, res) => {
   } catch (err) {
     return res.status(500).json({ active: false, error: err.message });
   }
+});
+
+// ─── Download session credentials as .env file ───
+
+router.get('/env', (req, res) => {
+  const session = extractSession(req);
+
+  if (!session.tokenSN) return res.status(401).json({ error: 'Missing X-Token-SN header.' });
+  if (!session.vtokenSecret) return res.status(401).json({ error: 'Missing X-Vtoken-Secret header.' });
+
+  // Verify the vtokenSecret belongs to this server before exporting
+  try {
+    decryptSecret(session.vtokenSecret);
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired vtokenSecret. Re-authenticate.' });
+  }
+
+  const webhookSecret = loadWebhooks()[0]?.secret || '';
+
+  const env = [
+    `KASPI_TOKEN_SN=${session.tokenSN}`,
+    `KASPI_VTOKEN_SECRET=${session.vtokenSecret}`,
+    `KASPI_PROFILE_ID=${session.profileId || ''}`,
+    `KASPI_WEBHOOK_SECRET=${webhookSecret}`,
+    '',
+  ].join('\n');
+
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="kaspi.env"');
+  res.send(env);
 });
 
 export default router;

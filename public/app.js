@@ -194,6 +194,7 @@ const verifyOtp = async () => {
       saveSession(resp);
       authProcessId = null;
       showMainScreen(resp);
+      downloadEnv();
     } else {
       showAuthMsg(`Неверный код или ошибка: ${resp.body?.data?.desc || JSON.stringify(resp.body)}`, 'err');
     }
@@ -214,6 +215,27 @@ const showMainScreen = (data) => {
     $('userName').textContent = data.phone || '—';
     $('userOrg').textContent = data.orgName || '—';
     $('userAvatar').textContent = (data.orgName || 'K')[0].toUpperCase();
+  }
+};
+
+const downloadEnv = async () => {
+  try {
+    const resp = await fetch(API + '/api/session/env', { headers: sessionHeaders() });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      alert(`Не удалось скачать .env: ${err.error || resp.status}`);
+      return;
+    }
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'kaspi.env';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    alert(`Ошибка скачивания .env: ${e.message}`);
   }
 };
 
